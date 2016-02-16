@@ -3,7 +3,7 @@ import unittest
 # third parties
 from flask import url_for
 # ours
-from src.crusca import app
+from src.crusca import create_app
 from .decorators import provider, fixtureFile
 
 
@@ -11,6 +11,8 @@ class CruscaTests(unittest.TestCase):
     FIXTURES_DIR = 'fixtures/'
 
     def setUp(self):
+        app = create_app()
+
         # propagate the exceptions to the test client
         app.config['TESTING'] = True
 

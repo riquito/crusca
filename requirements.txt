@@ -1,6 +1,7 @@
 ## required packages:
 Flask==0.10.1
 autopep8==1.2.1
+PyYAML==3.11
 
 ## The following requirements were added by pip freeze:
 itsdangerous==0.24
