@@ -1,15 +1,13 @@
 # third parties
-from flask import Flask, jsonify
+from flask import Flask
 # ours
 from .decorators import github_events
+from . import github_bp
 
 app = Flask(__name__)
+app.register_blueprint(github_bp.blueprint)
 
 
-@app.route("/push-event", methods=['POST'])
-@github_events(['push'])
-def push_action():
-    return jsonify({})
 
 if __name__ == "__main__":
     app.run()

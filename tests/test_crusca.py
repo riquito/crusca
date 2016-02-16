@@ -33,18 +33,18 @@ class CruscaTests(unittest.TestCase):
 
     @provider('dpNotAllowedMethodsForPushAction')
     def test_push_action_accept_only_post_method(self, method):
-        url = url_for('push_action', _method='POST')
+        url = url_for('github_bp.push_action', _method='POST')
         res = self.client.open(url, method=method)
         self.assertEqual(405, res.status_code)
 
     def test_push_action_accept_post(self):
-        url = url_for('push_action', _method='POST')
+        url = url_for('github_bp.push_action', _method='POST')
         res = self.client.post(url)
         self.assertEqual(400, res.status_code)
 
     @fixtureFile('push_payload.json')
     def test_push_action(self, payload):
-        url = url_for('push_action', _method='POST')
+        url = url_for('github_bp.push_action', _method='POST')
         headers = {'X-Github-Event': 'push'}
         res = self.client.post(url, data=payload, headers=headers)
         self.assertEqual(200, res.status_code)
