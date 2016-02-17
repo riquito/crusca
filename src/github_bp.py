@@ -10,3 +10,8 @@ bp = blueprint = Blueprint('github_bp', __name__)
 @github_events(['push'])
 def push_action():
     return jsonify({})
+
+
+@bp.record_once
+def keep_config(state):
+    bp.config = state.app.config

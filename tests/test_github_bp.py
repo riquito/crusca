@@ -10,6 +10,13 @@ from .decorators import provider, fixtureFile
 class GithubBPTests(unittest.TestCase):
     FIXTURES_DIR = 'fixtures/'
 
+    def test_config_attach(self):
+        app = Flask(__name__)
+        app.config['FOO'] = 'bar'
+        app.register_blueprint(bp)
+        self.assertIn('FOO', bp.config)
+        self.assertEqual('bar', bp.config['FOO'])
+
     def dpNotAllowedMethodsForPushAction(self):
         return [
             ['GET'],
