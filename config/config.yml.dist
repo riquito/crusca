@@ -1,5 +1,6 @@
 COMMON: &common
     SECRET_KEY: insecure
+    GITHUB_AUTH_TOKEN: foobar
     RULES:
         capital_letter: ~
         bad_start: ['fixed', 'added']
