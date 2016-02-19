@@ -20,6 +20,9 @@ class UnacceptableContentError(Exception): pass
 class RuleNotFoundError(Exception): pass
 
 class Rule:
+    def __init__(self, *args, **kwargs):
+        pass
+
     def analyze(message):
         raise NotImplementedError
 
