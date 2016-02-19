@@ -1,5 +1,9 @@
 COMMON: &common
     SECRET_KEY: insecure
+    RULES:
+        capital_letter: ~
+        bad_start: ['fixed', 'added']
+        ending_dot: false
 
 DEVELOPMENT: &development
     <<: *common
