@@ -23,7 +23,8 @@ def get_yaml_config(path, environment):
     conf['ENVIRONMENT'] = environment
     return {k: v for k, v in conf.items() if k.isupper()}
 
-if __name__ == "__main__":
+
+def main():
     import os
 
     env = os.environ.get('ENVIRONMENT', 'DEVELOPMENT')
