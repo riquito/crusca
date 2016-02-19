@@ -2,7 +2,8 @@
 from flask import Blueprint, jsonify
 # ours
 from .decorators import github_events
-from .rules import PickyReader
+from .picky_reader import PickyReader
+from .rules import UnacceptableContentError
 
 bp = blueprint = Blueprint('github_bp', __name__)
 
