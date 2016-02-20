@@ -1,3 +1,5 @@
+# builtins
+import os
 # third parties
 from flask import Flask
 import yaml
@@ -25,8 +27,6 @@ def get_yaml_config(path, environment):
 
 
 def main():
-    import os
-
     env = os.environ.get('ENVIRONMENT', 'DEVELOPMENT')
     root_path = os.path.dirname(os.path.realpath(__file__))
     config_path = os.path.join(root_path, '../config/config.yml')
