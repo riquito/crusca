@@ -1,5 +1,7 @@
 # builtins
 import unittest
+from unittest.mock import patch, Mock
+import json
 # third parties
 from flask import Flask, url_for
 # ours
@@ -10,12 +12,15 @@ from .decorators import provider, fixtureFile
 class GithubBPTests(unittest.TestCase):
     FIXTURES_DIR = 'fixtures/'
 
-    def test_config_attach(self):
+    @patch('src.github_bp.reader')
+    @patch('src.github_client.GithubClient')
+    def test_on_blueprint_loaded(self, github_client_class_mock, picky_reader_mock):
         app = Flask(__name__)
-        app.config['FOO'] = 'bar'
+        app.config['RULES'] = {'rule_name_x':'conf'}
+        app.config['AUTH_TOKEN'] = 'secrettest'
         app.register_blueprint(bp)
-        self.assertIn('FOO', bp.config)
-        self.assertEqual('bar', bp.config['FOO'])
+        picky_reader_mock.register.assert_called_once_with('rule_name_x', 'conf')
+        github_client_class_mock.assert_called_once_with('secrettest')
 
     def dpNotAllowedMethodsForPushAction(self):
         return [
@@ -24,10 +29,20 @@ class GithubBPTests(unittest.TestCase):
             ['DELETE']
         ]
 
+    @patch('src.github_bp.reader')
+    @patch('src.github_client.GithubClient')
+    def _get_test_app(self, github_client_class_mock, picky_reader_mock):
+        app = Flask(__name__)
+        app.config['RULES'] = {'rule_name_x':'conf'}
+        app.config['AUTH_TOKEN'] = 'secrettest'
+        app.config['TESTING'] = True
+        app.register_blueprint(bp)
+        return app
+
+
     @provider('dpNotAllowedMethodsForPushAction')
     def test_push_action_accept_only_post_method(self, method):
-        app = Flask(__name__)
-        app.register_blueprint(bp)
+        app = self._get_test_app()
         client = app.test_client()
         with app.test_request_context():
             url = url_for('github_bp.push_action', _method='POST')
@@ -35,7 +50,7 @@ class GithubBPTests(unittest.TestCase):
             self.assertEqual(405, res.status_code)
 
     def test_push_action_accept_post(self):
-        app = Flask(__name__)
+        app = self._get_test_app()
         app.register_blueprint(bp)
         client = app.test_client()
         with app.test_request_context():
@@ -45,14 +60,29 @@ class GithubBPTests(unittest.TestCase):
 
     @fixtureFile('push_payload.json')
     def test_push_action(self, payload):
-        app = Flask(__name__)
+        app = self._get_test_app()
         app.register_blueprint(bp)
         client = app.test_client()
         with app.test_request_context():
             url = url_for('github_bp.push_action', _method='POST')
             headers = {'X-Github-Event': 'push'}
-            res = client.post(url, data=payload, headers=headers)
+            res = client.post(url, data=payload, headers=headers, content_type='application/json')
             self.assertEqual(200, res.status_code)
             self.assertEqual('application/json', res.headers.get('Content-Type'))
             self.assertEqual(b'{}', res.data)
+
+    @fixtureFile('push_payload.json')
+    def test_push_action_with_incomplete_json(self, payload):
+        app = self._get_test_app()
+        app.register_blueprint(bp)
+        client = app.test_client()
+        with app.test_request_context():
+            payload = json.loads(payload)
+            payload.pop('commits')
+            payload = json.dumps(payload)
+
+            url = url_for('github_bp.push_action', _method='POST')
+            headers = {'X-Github-Event': 'push'}
+            res = client.post(url, data=payload, headers=headers, content_type='application/json')
+            self.assertEqual(400, res.status_code)
 
