@@ -30,7 +30,7 @@ def push_action():
             reader.read(message)
         except UnacceptableContentError as err:
             state = github_client.STATE_FAILURE
-            desc = err.message
+            desc = str(err)
 
         bp.client.set_status(owner, repo, sha, state, desc)
 

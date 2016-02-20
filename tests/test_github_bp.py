@@ -7,6 +7,7 @@ from flask import Flask, url_for
 # ours
 from src.github_bp import blueprint as bp
 from .decorators import provider, fixtureFile
+from src.rules import UnacceptableContentError
 
 
 class GithubBPTests(unittest.TestCase):
@@ -59,7 +60,7 @@ class GithubBPTests(unittest.TestCase):
             self.assertEqual(400, res.status_code)
 
     @fixtureFile('push_payload.json')
-    def test_push_action(self, payload):
+    def test_push_action_success(self, payload):
         app = self._get_test_app()
         app.register_blueprint(bp)
         client = app.test_client()
@@ -70,6 +71,35 @@ class GithubBPTests(unittest.TestCase):
             self.assertEqual(200, res.status_code)
             self.assertEqual('application/json', res.headers.get('Content-Type'))
             self.assertEqual(b'{}', res.data)
+
+            owner = 'baxterthehacker'
+            repo = 'public-repo'
+            sha = '0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c'
+            state = 'success'
+            desc = 'Crusca approved'
+            bp.client.set_status.assert_called_once_with(owner, repo, sha, state, desc)
+
+    @patch('src.github_bp.reader')
+    @fixtureFile('push_payload.json')
+    def test_push_action_unacceptable_message(self, payload, reader_mock):
+        app = self._get_test_app()
+        app.register_blueprint(bp)
+        client = app.test_client()
+        with app.test_request_context():
+            url = url_for('github_bp.push_action', _method='POST')
+            headers = {'X-Github-Event': 'push'}
+            reader_mock.read.side_effect = UnacceptableContentError('Boom')
+            res = client.post(url, data=payload, headers=headers, content_type='application/json')
+            self.assertEqual(200, res.status_code)
+            self.assertEqual('application/json', res.headers.get('Content-Type'))
+            self.assertEqual(b'{}', res.data)
+            
+            owner = 'baxterthehacker'
+            repo = 'public-repo'
+            sha = '0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c'
+            state = 'failure'
+            desc = 'Boom'
+            bp.client.set_status.assert_called_once_with(owner, repo, sha, state, desc)
 
     @fixtureFile('push_payload.json')
     def test_push_action_with_incomplete_json(self, payload):

@@ -26,12 +26,12 @@ def fixtureFile(fileName):
     """
     def dec(func):
         @wraps(func)
-        def wrapper(self):
+        def wrapper(self, *args, **kwargs):
             classFsPath = dirname(inspect.getsourcefile(self.__class__))
             fixtureFilePath = join(classFsPath, self.FIXTURES_DIR, fileName)
             text = ''
             with open(fixtureFilePath, mode='r', encoding='utf-8') as fp:
                 text = fp.read()
-            return func(self, text)
+            return func(self, text, *args, **kwargs)
         return wrapper
     return dec
