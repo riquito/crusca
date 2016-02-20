@@ -35,8 +35,8 @@ class CruscaTests(unittest.TestCase):
         get_yaml_config_mock.return_value = {'x':1}
         app_mock = Mock()
         create_app_mock.return_value = app_mock
-        main()
+        res = main()
         get_yaml_config_mock.assert_called_once_with('/a/b/c/../config/config.yml', 'DEVELOPMENT')
         create_app_mock.assert_called_once_with({'x':1})
-        app_mock.run.assert_called_once()
+        self.assertIs(app_mock, res)
 

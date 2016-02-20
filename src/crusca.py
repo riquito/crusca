@@ -33,4 +33,5 @@ def main():
     config = get_yaml_config(config_path, env)
 
     app = create_app(config)
-    app.run()
+    return app
+
