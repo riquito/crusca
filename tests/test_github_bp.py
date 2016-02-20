@@ -116,3 +116,13 @@ class GithubBPTests(unittest.TestCase):
             res = client.post(url, data=payload, headers=headers, content_type='application/json')
             self.assertEqual(400, res.status_code)
 
+    def test_status_action(self):
+        app = self._get_test_app()
+        app.register_blueprint(bp)
+        client = app.test_client()
+        with app.test_request_context():
+            url = url_for('github_bp.status_action')
+            res = client.get(url)
+            self.assertEqual(200, res.status_code)
+            self.assertEqual(b'alive', res.data)
+

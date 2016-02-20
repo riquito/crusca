@@ -36,6 +36,10 @@ def push_action():
 
     return jsonify({})
 
+@bp.route('/status')
+def status_action():
+    return 'alive'
+
 
 @bp.record_once
 def on_blueprint_loaded(state):
