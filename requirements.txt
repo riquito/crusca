@@ -3,6 +3,7 @@ Flask==0.10.1
 autopep8==1.2.1
 PyYAML==3.11
 requests==2.9.1
+coverage==4.0.3
 
 ## The following requirements were added by pip freeze:
 itsdangerous==0.24
