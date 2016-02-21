@@ -1,6 +1,8 @@
 Crusca, the picky commit reader
 ===============================
 
+[![Build Status](https://api.travis-ci.org/riquito/crusca.svg?branch=master)](https://travis-ci.org/riquito/crusca) [![Coverage Status](https://coveralls.io/repos/github/riquito/crusca/badge.svg?branch=master)](https://coveralls.io/github/riquito/crusca?branch=master)
+
 Disheartened by yet another commit with the wrong message's format? You don't
 want to spend your time pointing out to your mates that you agreed to follow
 some conventions? Worry no more, Crusca will be glad to lift the burden from
