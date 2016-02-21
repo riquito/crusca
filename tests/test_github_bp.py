@@ -102,13 +102,28 @@ class GithubBPTests(unittest.TestCase):
             bp.client.set_status.assert_called_once_with(owner, repo, sha, state, desc)
 
     @fixtureFile('push_payload.json')
-    def test_push_action_with_incomplete_json(self, payload):
+    def test_push_action_return_400_on_missing_commits(self, payload):
         app = self._get_test_app()
         app.register_blueprint(bp)
         client = app.test_client()
         with app.test_request_context():
             payload = json.loads(payload)
             payload.pop('commits')
+            payload = json.dumps(payload)
+
+            url = url_for('github_bp.push_action', _method='POST')
+            headers = {'X-Github-Event': 'push'}
+            res = client.post(url, data=payload, headers=headers, content_type='application/json')
+            self.assertEqual(400, res.status_code)
+
+    @fixtureFile('push_payload.json')
+    def test_push_action_return_400_on_missing_commit_data(self, payload):
+        app = self._get_test_app()
+        app.register_blueprint(bp)
+        client = app.test_client()
+        with app.test_request_context():
+            payload = json.loads(payload)
+            payload['commits'][0].pop('id')
             payload = json.dumps(payload)
 
             url = url_for('github_bp.push_action', _method='POST')
