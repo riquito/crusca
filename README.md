@@ -33,7 +33,7 @@ python >= 3.4
     # copy default configuration
     cp config/config.yml.dist config/config.yml
 
-### Run
+### Run (you probably want to read `configuration` before)
 
     source ~/.crusca-env
     ./crusca
@@ -49,18 +49,32 @@ python >= 3.4
     coverage run --branch --include='src/*'  -m unittest discover
     coverage report
 
+### Setup the webhook on Github
+
+You'll need to create a new webhook: https://github.com/[owner]/[repo]/settings/hooks/new
+
+The payload url is http[s]://your.domain/push-event
+
 ### Configuration (config/config.yml)
 
-`AUTH_TOKEN` is the Github OAUTH token. You just need the repo:status
+`AUTH_TOKEN` is a [Github OAUTH token](https://github.com/settings/tokens/new). You just need the scope repo:status
 
-`RULES` is a list of the enforced rules. Available rules are
+`RULES` is a list of the enforced rules. The available rules are
 
 ##### bad_start
 
-Expect a list of words that must not be first. Useful if you want to enforce
+Check a list of words that must not be first. Useful if you want to enforce
 for example `present simple`, or avoid `fixup!` or `Merge` commits.
+Case insensitive.
 
 e.g. bad_start: ['fixup!', 'added', 'fixed', 'removed']
+
+##### bad_word
+
+Check that certain words are not present in the message.
+Case insensitive.
+
+e.g. bad_words: ['wip']
 
 ##### capital_letter
 
