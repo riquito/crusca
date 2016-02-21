@@ -21,5 +21,5 @@ class Rule:
     def __init__(self, *args, **kwargs):
         pass
 
-    def analyze(message):
+    def analyze(self, message):
         raise NotImplementedError
