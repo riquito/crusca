@@ -21,7 +21,7 @@ def push_action():
             repo = payload['repository']['name']
             owner = payload['repository']['owner']['name']
             state = github_client.STATE_SUCCESS
-            message = commit['message']
+            message = ''.join(commit['message'].splitlines()[:1])
             desc = 'Crusca approved'
         except KeyError:
             abort(400)

@@ -59,11 +59,16 @@ class GithubBPTests(unittest.TestCase):
             res = client.post(url)
             self.assertEqual(400, res.status_code)
 
+    @patch('src.github_bp.reader')
     @fixtureFile('push_payload.json')
-    def test_push_action_success(self, payload):
+    def test_push_action_success(self, payload, reader_mock):
         app = self._get_test_app()
         app.register_blueprint(bp)
         client = app.test_client()
+        json_payload = json.loads(payload)
+        json_payload['commits'][0]['message'] = 'first line\n\nparagraph'
+        payload = json.dumps(json_payload)
+
         with app.test_request_context():
             url = url_for('github_bp.push_action', _method='POST')
             headers = {'X-Github-Event': 'push'}
@@ -71,6 +76,7 @@ class GithubBPTests(unittest.TestCase):
             self.assertEqual(200, res.status_code)
             self.assertEqual('application/json', res.headers.get('Content-Type'))
             self.assertEqual(b'{}', res.data)
+            reader_mock.read.assert_called_once_with('first line')
 
             owner = 'baxterthehacker'
             repo = 'public-repo'
