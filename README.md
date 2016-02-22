@@ -9,8 +9,8 @@ some conventions? Worry no more, Crusca will be glad to lift the burden from
 your shoulders.
 
 Thanks to a ~~neural network~~ ~~smart~~ stupid simple algorithm it can check
-that the commit's messages follow your guidelines, and set a failed status on
-such commits.
+that the commits' messages follow your guidelines and set a failed status on
+the commits who don't.
 
 ### Requirements
 
