@@ -1,3 +1,5 @@
+# builtins
+import hashlib, hmac
 # third parties
 from flask import Blueprint, jsonify, request, abort
 # ours
@@ -28,6 +30,16 @@ def push_action():
         auth_token = bp.config['AUTH'][owner_repo]['auth_token']
     except KeyError:
         abort(401)
+
+    if 'X-Hub-Signature' not in request.headers:
+        abort(401)
+
+    actual_sig = request.headers['X-Hub-Signature']
+    body = request.get_data()
+    valid_sig = 'sha1=' + hmac.new(secret_key, body, hashlib.sha1).hexdigest()
+
+    if not hmac.compare_digest(actual_sig, valid_sig):
+        abort(403)
 
     client = github_client.GithubClient(auth_token)
 

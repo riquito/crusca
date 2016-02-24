@@ -1,9 +1,9 @@
 # builtins
 import unittest
 from unittest.mock import patch, Mock
-import json
+import hashlib, json
 # third parties
-from flask import Flask, url_for
+from flask import Flask, url_for, request
 # ours
 from src.github_bp import blueprint as bp
 from .decorators import provider, fixtureFile
@@ -16,9 +16,12 @@ class GithubBPTests(unittest.TestCase):
     def setUp(self):
         self.picky_reader_patcher = patch('src.github_bp.reader')
         self.github_client_patcher = patch('src.github_client.GithubClient')
+        self.hmac_patcher = patch('src.github_bp.hmac')
 
         self.picky_reader_mock = self.picky_reader_patcher.start()
         self.github_client_cls_mock = self.github_client_patcher.start()
+        self.hmac_mock = self.hmac_patcher.start()
+
         self.github_client_mock = self.github_client_cls_mock.return_value
 
         self.app = Flask(__name__)
@@ -31,14 +34,22 @@ class GithubBPTests(unittest.TestCase):
             }
         }
 
+        self.headers = {
+            'X-Github-Event': 'push',
+            'X-Hub-Signature': 'sig seems legit'
+        }
         self.client = self.app.test_client()
 
         self.request_context = self.app.test_request_context()
         self.request_context.push()
 
+        # by default set the signature as valid
+        self.hmac_mock.compare_digest.return_value = True
+
     def tearDown(self):
         self.picky_reader_mock = self.picky_reader_patcher.stop()
         self.github_client_cls_mock = self.github_client_patcher.stop()
+        self.hmac_patcher.stop()
         self.request_context.pop()
         if hasattr(bp, 'config'):
             del(bp.config)
@@ -80,8 +91,7 @@ class GithubBPTests(unittest.TestCase):
         payload = json.dumps(json_payload)
 
         url = url_for('github_bp.push_action', _method='POST')
-        headers = {'X-Github-Event': 'push'}
-        res = self.client.post(url, data=payload, headers=headers, content_type='application/json')
+        res = self.client.post(url, data=payload, headers=self.headers, content_type='application/json')
         self.assertEqual(200, res.status_code)
         self.assertEqual('application/json', res.headers.get('Content-Type'))
         self.assertEqual(b'{}', res.data)
@@ -100,9 +110,8 @@ class GithubBPTests(unittest.TestCase):
     def test_push_action_unacceptable_message(self, payload):
         self.app.register_blueprint(bp)
         url = url_for('github_bp.push_action', _method='POST')
-        headers = {'X-Github-Event': 'push'}
         self.picky_reader_mock.read.side_effect = UnacceptableContentError('Boom')
-        res = self.client.post(url, data=payload, headers=headers, content_type='application/json')
+        res = self.client.post(url, data=payload, headers=self.headers, content_type='application/json')
         self.assertEqual(200, res.status_code)
         self.assertEqual('application/json', res.headers.get('Content-Type'))
         self.assertEqual(b'{}', res.data)
@@ -124,8 +133,7 @@ class GithubBPTests(unittest.TestCase):
         payload = json.dumps(payload)
 
         url = url_for('github_bp.push_action', _method='POST')
-        headers = {'X-Github-Event': 'push'}
-        res = self.client.post(url, data=payload, headers=headers, content_type='application/json')
+        res = self.client.post(url, data=payload, headers=self.headers, content_type='application/json')
         self.assertEqual(400, res.status_code)
 
     @fixtureFile('push_payload.json')
@@ -136,8 +144,7 @@ class GithubBPTests(unittest.TestCase):
         payload = json.dumps(payload)
 
         url = url_for('github_bp.push_action', _method='POST')
-        headers = {'X-Github-Event': 'push'}
-        res = self.client.post(url, data=payload, headers=headers, content_type='application/json')
+        res = self.client.post(url, data=payload, headers=self.headers, content_type='application/json')
         self.assertEqual(400, res.status_code)
 
     @fixtureFile('push_payload.json')
@@ -148,8 +155,7 @@ class GithubBPTests(unittest.TestCase):
         payload = json.dumps(payload)
 
         url = url_for('github_bp.push_action', _method='POST')
-        headers = {'X-Github-Event': 'push'}
-        res = self.client.post(url, data=payload, headers=headers, content_type='application/json')
+        res = self.client.post(url, data=payload, headers=self.headers, content_type='application/json')
         self.assertEqual(400, res.status_code)
 
     @fixtureFile('push_payload.json')
@@ -160,8 +166,7 @@ class GithubBPTests(unittest.TestCase):
         payload = json.dumps(payload)
 
         url = url_for('github_bp.push_action', _method='POST')
-        headers = {'X-Github-Event': 'push'}
-        res = self.client.post(url, data=payload, headers=headers, content_type='application/json')
+        res = self.client.post(url, data=payload, headers=self.headers, content_type='application/json')
         self.assertEqual(400, res.status_code)
 
     @fixtureFile('push_payload.json')
@@ -170,8 +175,7 @@ class GithubBPTests(unittest.TestCase):
         bp.config['AUTH']['baxterthehacker/public-repo'].pop('secret_key')
 
         url = url_for('github_bp.push_action', _method='POST')
-        headers = {'X-Github-Event': 'push'}
-        res = self.client.post(url, data=payload, headers=headers, content_type='application/json')
+        res = self.client.post(url, data=payload, headers=self.headers, content_type='application/json')
         self.assertEqual(401, res.status_code)
 
     @fixtureFile('push_payload.json')
@@ -180,9 +184,29 @@ class GithubBPTests(unittest.TestCase):
         bp.config['AUTH']['baxterthehacker/public-repo'].pop('auth_token')
 
         url = url_for('github_bp.push_action', _method='POST')
-        headers = {'X-Github-Event': 'push'}
-        res = self.client.post(url, data=payload, headers=headers, content_type='application/json')
+        res = self.client.post(url, data=payload, headers=self.headers, content_type='application/json')
         self.assertEqual(401, res.status_code)
+
+    @fixtureFile('push_payload.json')
+    def test_push_action_return_401_on_missing_signature(self, payload):
+        self.app.register_blueprint(bp)
+
+        self.headers.pop('X-Hub-Signature')
+
+        url = url_for('github_bp.push_action', _method='POST')
+        res = self.client.post(url, data=payload, headers=self.headers, content_type='application/json')
+        self.assertEqual(401, res.status_code)
+
+    @fixtureFile('push_payload.json')
+    def test_push_action_return_403_on_invalid_signature(self, payload):
+        self.app.register_blueprint(bp)
+
+        self.hmac_mock.compare_digest.return_value = False
+
+        url = url_for('github_bp.push_action', _method='POST')
+        res = self.client.post(url, data=payload, headers=self.headers, content_type='application/json')
+        self.assertEqual(403, res.status_code)
+        self.hmac_mock.new.assert_called_once_with('the secret key', payload.encode('utf-8'), hashlib.sha1)
 
     def test_status_action(self):
         self.app.register_blueprint(bp)
