@@ -15,11 +15,25 @@ reader = PickyReader()
 @github_events(['push'])
 def push_action():
     payload = request.get_json()
+
+    try:
+        repo = payload['repository']['name']
+        owner = payload['repository']['owner']['name']
+    except KeyError:
+        abort(400)
+
+    owner_repo = '{}/{}'.format(owner, repo)
+    try:
+        secret_key = bp.config['AUTH'][owner_repo]['secret_key']
+        auth_token = bp.config['AUTH'][owner_repo]['auth_token']
+    except KeyError:
+        abort(401)
+
+    client = github_client.GithubClient(auth_token)
+
     for commit in payload.get('commits') or abort(400):
         try:
             sha = commit['id']
-            repo = payload['repository']['name']
-            owner = payload['repository']['owner']['name']
             state = github_client.STATE_SUCCESS
             message = ''.join(commit['message'].splitlines()[:1])
             desc = 'Crusca approved'
@@ -32,7 +46,7 @@ def push_action():
             state = github_client.STATE_FAILURE
             desc = str(err)
 
-        bp.client.set_status(owner, repo, sha, state, desc)
+        client.set_status(owner, repo, sha, state, desc)
 
     return jsonify({})
 
@@ -47,4 +61,5 @@ def on_blueprint_loaded(state):
     for rule_name, rule_config in config['RULES'].items():
         reader.register(rule_name, rule_config)
 
-    state.blueprint.client = github_client.GithubClient(config['AUTH_TOKEN'])
+    # attach the whole config to the blueprint
+    bp.config = config
