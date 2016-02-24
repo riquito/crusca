@@ -19,11 +19,17 @@ class GithubBPTests(unittest.TestCase):
 
         self.picky_reader_mock = self.picky_reader_patcher.start()
         self.github_client_cls_mock = self.github_client_patcher.start()
+        self.github_client_mock = self.github_client_cls_mock.return_value
 
         self.app = Flask(__name__)
-        self.app.config['RULES'] = {'rule_name_x': 'conf'}
-        self.app.config['AUTH_TOKEN'] = 'secrettest'
         self.app.config['TESTING'] = True
+        self.app.config['RULES'] = {'rule_name_x': 'conf'}
+        self.app.config['AUTH'] = {
+            'baxterthehacker/public-repo': {
+                'secret_key': 'the secret key',
+                'auth_token': 'the oauth token'
+            }
+        }
 
         self.client = self.app.test_client()
 
@@ -34,12 +40,15 @@ class GithubBPTests(unittest.TestCase):
         self.picky_reader_mock = self.picky_reader_patcher.stop()
         self.github_client_cls_mock = self.github_client_patcher.stop()
         self.request_context.pop()
+        if hasattr(bp, 'config'):
+            del(bp.config)
 
     def test_on_blueprint_loaded(self):
         self.app.register_blueprint(bp)
 
         self.picky_reader_mock.register.assert_called_once_with('rule_name_x', 'conf')
-        self.github_client_cls_mock.assert_called_once_with('secrettest')
+        self.assertTrue(hasattr(bp, 'config'))
+        self.assertEqual(bp.config, self.app.config)
 
     def dpNotAllowedMethodsForPushAction(self):
         return [
@@ -83,7 +92,9 @@ class GithubBPTests(unittest.TestCase):
         sha = '0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c'
         state = 'success'
         desc = 'Crusca approved'
-        bp.client.set_status.assert_called_once_with(owner, repo, sha, state, desc)
+
+        self.github_client_cls_mock.assert_called_once_with('the oauth token')
+        self.github_client_mock.set_status.assert_called_once_with(owner, repo, sha, state, desc)
 
     @fixtureFile('push_payload.json')
     def test_push_action_unacceptable_message(self, payload):
@@ -101,7 +112,9 @@ class GithubBPTests(unittest.TestCase):
         sha = '0d1a26e67d8f5eaf1f6ba5c57fc3c7d91ac0fd1c'
         state = 'failure'
         desc = 'Boom'
-        bp.client.set_status.assert_called_once_with(owner, repo, sha, state, desc)
+
+        self.github_client_cls_mock.assert_called_once_with('the oauth token')
+        self.github_client_mock.set_status.assert_called_once_with(owner, repo, sha, state, desc)
 
     @fixtureFile('push_payload.json')
     def test_push_action_return_400_on_missing_commits(self, payload):
@@ -126,6 +139,50 @@ class GithubBPTests(unittest.TestCase):
         headers = {'X-Github-Event': 'push'}
         res = self.client.post(url, data=payload, headers=headers, content_type='application/json')
         self.assertEqual(400, res.status_code)
+
+    @fixtureFile('push_payload.json')
+    def test_push_action_return_400_on_missing_repo(self, payload):
+        self.app.register_blueprint(bp)
+        payload = json.loads(payload)
+        payload['repository'].pop('name')
+        payload = json.dumps(payload)
+
+        url = url_for('github_bp.push_action', _method='POST')
+        headers = {'X-Github-Event': 'push'}
+        res = self.client.post(url, data=payload, headers=headers, content_type='application/json')
+        self.assertEqual(400, res.status_code)
+
+    @fixtureFile('push_payload.json')
+    def test_push_action_return_400_on_missing_owner(self, payload):
+        self.app.register_blueprint(bp)
+        payload = json.loads(payload)
+        payload['repository']['owner'].pop('name')
+        payload = json.dumps(payload)
+
+        url = url_for('github_bp.push_action', _method='POST')
+        headers = {'X-Github-Event': 'push'}
+        res = self.client.post(url, data=payload, headers=headers, content_type='application/json')
+        self.assertEqual(400, res.status_code)
+
+    @fixtureFile('push_payload.json')
+    def test_push_action_return_401_on_missing_config_secret_key(self, payload):
+        self.app.register_blueprint(bp)
+        bp.config['AUTH']['baxterthehacker/public-repo'].pop('secret_key')
+
+        url = url_for('github_bp.push_action', _method='POST')
+        headers = {'X-Github-Event': 'push'}
+        res = self.client.post(url, data=payload, headers=headers, content_type='application/json')
+        self.assertEqual(401, res.status_code)
+
+    @fixtureFile('push_payload.json')
+    def test_push_action_return_401_on_missing_config_auth_token(self, payload):
+        self.app.register_blueprint(bp)
+        bp.config['AUTH']['baxterthehacker/public-repo'].pop('auth_token')
+
+        url = url_for('github_bp.push_action', _method='POST')
+        headers = {'X-Github-Event': 'push'}
+        res = self.client.post(url, data=payload, headers=headers, content_type='application/json')
+        self.assertEqual(401, res.status_code)
 
     def test_status_action(self):
         self.app.register_blueprint(bp)
