@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
-import src.crusca
-app = src.crusca.create_app()
-app.run()
+from src.crusca import main
+
+application = main()
+
+if __name__ == '__main__':
+    application.run()
