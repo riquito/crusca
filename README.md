@@ -91,6 +91,14 @@ e.g. ending_dot: false # require that the message does NOT end with a dot
 
 e.g. ending_dot: true  # require that the message DOES end with a dot
 
+##### no_fixup
+
+Check if the message starts with fixup!. You can obtain the same result with
+the plugin bad_start, but this way may result cleaner to some people since
+it's probably often desired.
+
+e.g. no_fixup: ~
+
 ### Deploy with Apache and mod_wsgi
 
 In this example crusca has been cloned in
