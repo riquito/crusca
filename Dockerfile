@@ -13,7 +13,7 @@ RUN /env/bin/pip3 install --no-cache-dir uwsgi && \
     /env/bin/pip3 install -r requirements.txt
 
 ADD . /usr/src/app
-VOLUME /usr/src/app/config.yml
+VOLUME /usr/src/app/config/config.yml
 
 ENV ENVIRONMENT DEVELOPMENT
 
