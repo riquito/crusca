@@ -12,6 +12,18 @@ Thanks to a ~~neural network~~ ~~smart~~ stupid simple algorithm it can check
 that the commits' messages follow your guidelines and set a failed status on
 the commits who don't.
 
+## Easy way, docker
+
+    # copy app/config/config.yml.dist as config.yml and edit it to your liking
+    docker run -it --rm -v config.yml:/usr/src/app/config/config.yml riquito/crusca
+
+That would start a wsgi application, for an easy deploy consider [crusca-nginx](https://github.com/riquito/crusca-nginx).
+
+The endpoints are `/status` (should return 'alive') and `/push-event` (see below how
+to use it).
+
+## Long non magic way
+
 ### Requirements
 
 python >= 3.4
@@ -46,7 +58,7 @@ python >= 3.4
 ### Check coverage
 
     source ~/.crusca-env
-    coverage run --branch --include='src/*'  -m unittest discover
+    coverage run --branch --include='src/*' -m unittest discover
     coverage report
 
 ### Setup the webhook on Github
@@ -57,9 +69,25 @@ The payload url is http[s]://your.domain/push-event
 
 ### Configuration (config/config.yml)
 
-`AUTH_TOKEN` is a [Github OAUTH token](https://github.com/settings/tokens/new). You just need the scope repo:status
+    RULES: # list of rules (name: arguments)
+        capital_letter: ~
+        bad_start: ['fixed', 'added']
+        ending_dot: false
+    AUTH:
+        # github owner/repo
+        riquito/crusca:
+            auth_token: foo
+            secret_key: bar
+        # more owner/repo ...
+        riquito/something-else:
+            auth_token: baz
+            secret_key: goo
 
-`RULES` is a list of the enforced rules. The available rules are
+`auth_token` is a [Github OAUTH token](https://github.com/settings/tokens/new). You just need the scope `repo:status`
+
+`secret_key` is the secret you set in the webhook configuration
+
+### Available rules
 
 ##### bad_start
 
@@ -98,6 +126,10 @@ the plugin bad_start, but this way may result cleaner to some people since
 it's probably often desired.
 
 e.g. no_fixup: ~
+
+### Deploy with Nginx
+
+Either use [crusca-nginx](https://github.com/riquito/crusca-nginx) or look how it's configured.
 
 ### Deploy with Apache and mod_wsgi
 
